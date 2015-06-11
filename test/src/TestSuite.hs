@@ -4,8 +4,6 @@
 
 module Main where
 
-
--------------------------------------------------------------------------------
 import           Control.Applicative
 import           Control.DeepSeq
 import           Criterion.Main                 as C
@@ -22,12 +20,10 @@ import           Test.Framework                 (defaultMain, testGroup)
 import           Test.Framework                 as T
 import           Test.Framework.Providers.HUnit as T
 import           Test.HUnit                     hiding (Test, path)
--------------------------------------------------------------------------------
+
 import           Web.UAParser
--------------------------------------------------------------------------------
 
 
--------------------------------------------------------------------------------
 main :: IO ()
 main = do
   arg <- getArgs
@@ -37,12 +33,6 @@ main = do
 
 
 
-                              ------------------
-                              -- Benchmarking --
-                              ------------------
-
-
--------------------------------------------------------------------------------
 benchMain :: IO ()
 benchMain = do
   cases <- loadTests "firefox_user_agent_strings.yaml"
@@ -52,10 +42,6 @@ benchMain = do
 
 
 
-                                 -------------
-                                 -- Testing --
-                                 -------------
-
 testMain :: IO ()
 testMain = T.defaultMain tests
     where
@@ -64,12 +50,6 @@ testMain = T.defaultMain tests
         , osTests ]
 
 
-                               ----------------
-                               -- UA Testing --
-                               ----------------
-
-
--------------------------------------------------------------------------------
 uaTests :: Test
 uaTests = buildTest $ do
   cases <- loadTests "firefox_user_agent_strings.yaml"
@@ -77,7 +57,6 @@ uaTests = buildTest $ do
 
 
 
--------------------------------------------------------------------------------
 testUAParser :: UserAgentTestCase -> Test
 testUAParser UATC{..} = testCase tn $ do
   case parsed of
