@@ -10,11 +10,11 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >=1.8
 
-data-files: ./*.yaml
+data-files: ./uap-core/*.yaml
 
 source-repository head
   type:     git
-  location: https://github.com/tobie/ua-parser
+  location: https://github.com/ua-parser/uap-haskell
   subdir:   haskell
 
 Library
