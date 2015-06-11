@@ -1,6 +1,6 @@
 Name:                ua-parser
 Description:         Please refer to the git/github README on the project for example usage.
-Version:             0.5
+Version:             0.6
 Synopsis:            A library for parsing User-Agent strings, official Haskell port of ua-parser
 License:             BSD3
 License-file:        LICENSE
@@ -10,11 +10,11 @@ Category:            Web
 Build-type:          Simple
 Cabal-version:       >=1.8
 
-data-files: ./*.yaml
+data-files: ./uap-core/*.yaml
 
 source-repository head
   type:     git
-  location: https://github.com/tobie/ua-parser
+  location: https://github.com/ua-parser/uap-haskell
   subdir:   haskell
 
 Library
@@ -28,7 +28,7 @@ Library
     , text
     , pcre-light
     , yaml             >= 0.7 && < 0.9
-    , aeson            >= 0.7 && < 0.8
+    , aeson            >= 0.7 && < 0.9
     , data-default
     , syb
     , file-embed       < 0.1

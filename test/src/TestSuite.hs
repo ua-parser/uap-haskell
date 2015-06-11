@@ -4,11 +4,8 @@
 
 module Main where
 
-
--------------------------------------------------------------------------------
 import           Control.Applicative
 import           Control.DeepSeq
-import           Control.Monad
 import           Criterion.Main                 as C
 import           Data.Aeson
 import           Data.ByteString.Char8          (ByteString)
@@ -23,13 +20,11 @@ import           Test.Framework                 (defaultMain, testGroup)
 import           Test.Framework                 as T
 import           Test.Framework.Providers.HUnit as T
 import           Test.HUnit                     hiding (Test, path)
-import           Text.Regex.PCRE.Light
--------------------------------------------------------------------------------
+
 import           Web.UAParser
--------------------------------------------------------------------------------
 
 
--------------------------------------------------------------------------------
+main :: IO ()
 main = do
   arg <- getArgs
   case arg of
@@ -38,27 +33,16 @@ main = do
 
 
 
-                              ------------------
-                              -- Benchmarking --
-                              ------------------
-
-
--------------------------------------------------------------------------------
+benchMain :: IO ()
 benchMain = do
-  cases <- loadTests "test_user_agent_parser.yaml"
-  cases2 <- loadTests "firefox_user_agent_strings.yaml"
-  let allC = cases ++ cases2
-      ua = bench "UA Parsing" $ nf (map (parseUA . uatcString)) allC
-  print $ show (length allC) ++ " strings being parsed."
+  cases <- loadTests "firefox_user_agent_strings.yaml"
+  let ua = bench "UA Parsing" $ nf (map (parseUA . uatcString)) cases
+  print $ show (length cases) ++ " strings being parsed."
   C.defaultMain [ua]
 
 
 
-                                 -------------
-                                 -- Testing --
-                                 -------------
-
-
+testMain :: IO ()
 testMain = T.defaultMain tests
     where
       tests =
@@ -66,21 +50,13 @@ testMain = T.defaultMain tests
         , osTests ]
 
 
-                               ----------------
-                               -- UA Testing --
-                               ----------------
-
-
--------------------------------------------------------------------------------
+uaTests :: Test
 uaTests = buildTest $ do
-  cases <- loadTests "test_user_agent_parser.yaml"
-  cases2 <- loadTests "firefox_user_agent_strings.yaml"
-  let allC = cases ++ cases2
-  return $ testGroup "UA Parsing Tests" $ map testUAParser allC
+  cases <- loadTests "firefox_user_agent_strings.yaml"
+  return $ testGroup "UA Parsing Tests" $ map testUAParser cases
 
 
 
--------------------------------------------------------------------------------
 testUAParser :: UserAgentTestCase -> Test
 testUAParser UATC{..} = testCase tn $ do
   case parsed of
@@ -96,30 +72,24 @@ testUAParser UATC{..} = testCase tn $ do
     m x = maybe "-" id x
 
 
-                               ----------------
-                               -- OS Testing --
-                               ----------------
-
-
-
--------------------------------------------------------------------------------
+-- OS Testing
+osTests :: Test
 osTests = buildTest $ do
-  cases <- loadTests "test_user_agent_parser_os.yaml"
+  cases <- loadTests "additional_os_tests.yaml"
   return $ testGroup "OS Parsing Tests" $ map testOSParser cases
 
 
 
--------------------------------------------------------------------------------
 testOSParser :: OSTestCase -> Test
 testOSParser OSTC{..} = testCase tn $ do
   case parsed of
     Nothing -> assertFailure "Can't produce OSResult"
     Just OSResult{..} -> do
      assertEqual "family is same" ostcFamily osrFamily
-     assertEqual "major is the same" ostcV1 osrV1
+     assertEqual "major is the same" ostcV1  osrV1
      assertEqual "minor is the same" ostcV2  osrV2
      assertEqual "patch is the same" ostcV3  osrV3
-     assertEqual "patch_minor is the same" ostcV4  osrV4
+     assertEqual "patch_minor is the same" ostcV4 osrV4
   where
     parsed = parseOS ostcString
     tn = T.unpack $ T.intercalate "/"
@@ -129,21 +99,16 @@ testOSParser OSTC{..} = testCase tn $ do
 
 
 
-                           ------------------------
-                           -- Loading Test Cases --
-                           ------------------------
 
+-- Loading Test Cases
 
-
--------------------------------------------------------------------------------
 loadTests :: FromJSON a => FilePath -> IO a
 loadTests fp = parseMonad p =<< either (error . show) id `fmap` decodeFileEither fp'
   where
-    fp' = "../test_resources" </> fp
+    fp' = "uap-core/test_resources" </> fp
     p (Object x) = x .: "test_cases"
 
 
--------------------------------------------------------------------------------
 data UserAgentTestCase = UATC {
       uatcString :: ByteString
     , uatcFamily :: Text
@@ -153,7 +118,6 @@ data UserAgentTestCase = UATC {
     } deriving (Show)
 
 
--------------------------------------------------------------------------------
 instance FromJSON UserAgentTestCase where
     parseJSON (Object v) =
       UATC <$> T.encodeUtf8 <$> v .: "user_agent_string"
@@ -163,7 +127,6 @@ instance FromJSON UserAgentTestCase where
            <*> (v .:? "v3" <|> return Nothing)
 
 
--------------------------------------------------------------------------------
 data OSTestCase = OSTC {
       ostcString :: ByteString
     , ostcFamily :: Text
@@ -174,7 +137,6 @@ data OSTestCase = OSTC {
     } deriving (Show)
 
 
--------------------------------------------------------------------------------
 instance FromJSON OSTestCase where
     parseJSON (Object v) =
       OSTC <$> (T.encodeUtf8 <$> v .: "user_agent_string" <|> return "")
@@ -184,7 +146,8 @@ instance FromJSON OSTestCase where
            <*> nonBlank (v .:? "patch" <|> return Nothing)
            <*> nonBlank (v .:? "patch_minor" <|> return Nothing)
 
--------------------------------------------------------------------------------
+nonBlank :: (Monad m) =>
+            m (Maybe Text) -> m (Maybe Text)
 nonBlank f = do
   res <- f
   return $ case res of
