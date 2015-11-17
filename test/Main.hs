@@ -57,7 +57,6 @@ testOSParser OSTC{..} = testCase tn $ do
   case parsed of
     Nothing -> assertFailure ("Can't produce OSResult from " <> show ostcString)
     Just r@OSResult{..} -> do
-     print r --TODO: drop
      assertEqual "family is same" ostcFamily osrFamily
      assertEqual "major is the same" ostcV1  osrV1
      assertEqual "minor is the same" ostcV2  osrV2
