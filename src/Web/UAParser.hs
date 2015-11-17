@@ -53,8 +53,8 @@ parseUA bs = msum $ map go uaParsers
         where
           mkRes [_,f,v1,v2,v3] = Just $ UAResult (repF f) (repV1 v1) (Just v2) (Just v3)
           mkRes [_,f,v1,v2]    = Just $ UAResult (repF f) (repV1 v1) (Just v2) Nothing
-          mkRes [_,f,v1]       = Just $ UAResult (repF f) (repV1 v1) Nothing   Nothing
-          mkRes [_,f]          = Just $ UAResult (repF f) Nothing    Nothing   Nothing
+          mkRes [_,f,v1]       = Just $ UAResult (repF f) (repV1 v1) Nothing Nothing
+          mkRes [_,f]          = Just $ UAResult (repF f) uaV1Rep Nothing Nothing
           mkRes _              = Nothing
 
           repV1 x = uaV1Rep `mplus` Just x
@@ -85,13 +85,14 @@ instance Default UAResult where
 
 
 
-                                ---------------
-                                -- OS Parser --
-                                ---------------
-
 -------------------------------------------------------------------------------
+-- OS Parser
+-------------------------------------------------------------------------------
+
+
 -- | Parse OS from given User-Agent string
 parseOS :: ByteString -> Maybe OSResult
+parseOS "" = Just def
 parseOS bs = msum $ map go osParsers
     where
       UAConfig{..} = uaConfig
@@ -99,14 +100,17 @@ parseOS bs = msum $ map go osParsers
       go OSParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match osRegex bs []
           where
-          mkRes [_,f,v1,v2,v3,v4] = Just $ OSResult (repF f) (Just v1) (Just v2) (Just v3) (Just v4)
-          mkRes [_,f,v1,v2,v3]    = Just $ OSResult (repF f) (Just v1) (Just v2) (Just v3) Nothing
-          mkRes [_,f,v1,v2]       = Just $ OSResult (repF f) (Just v1) (Just v2) Nothing   Nothing
-          mkRes [_,f,v1]          = Just $ OSResult (repF f) (Just v1) Nothing   Nothing   Nothing
-          mkRes [_,f]             = Just $ OSResult (repF f) Nothing   Nothing   Nothing   Nothing
+          mkRes [_,f,v1,v2,v3,v4] = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (Just v3) (Just v4)
+          mkRes [_,f,v1,v2,v3]    = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (Just v3) Nothing
+          mkRes [_,f,v1,v2]       = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) Nothing Nothing
+          mkRes [_,f,v1]          = Just $ OSResult (repF f) (repV1 v1) osRep2 Nothing Nothing
+          mkRes [_,f]             = Just $ OSResult (repF f) osRep1 osRep2 Nothing Nothing
           mkRes _                 = Nothing
 
           repF x = maybe x id osFamRep
+
+          repV1 x = osRep1 `mplus` Just x
+          repV2 x = osRep2 `mplus` Just x
 
 
 -------------------------------------------------------------------------------
@@ -120,7 +124,7 @@ data OSResult = OSResult {
     } deriving (Show,Read,Eq,Typeable,Data)
 
 instance Default OSResult where
-    def = OSResult "" Nothing Nothing Nothing Nothing
+    def = OSResult "Other" Nothing Nothing Nothing Nothing
 
 
 -------------------------------------------------------------------------------

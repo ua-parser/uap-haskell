@@ -4,6 +4,8 @@ module Main where
 
 
 -------------------------------------------------------------------------------
+import qualified Data.ByteString.Char8   as B
+import           Data.Monoid
 import qualified Data.Text               as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -31,7 +33,7 @@ uaTests = testGroup "UA Parsing Tests" . map testUAParser
 testUAParser :: UserAgentTestCase -> TestTree
 testUAParser UATC{..} = testCase tn $ do
   case parsed of
-    Nothing -> assertFailure "Can't produce UAResult"
+    Nothing -> assertFailure ("Can't produce UAResult from " <> show uatcString)
     Just UAResult{..} -> do
      assertEqual "family is same" uatcFamily uarFamily
      -- assertEqual "v1 is the same" uatcV1 uarV1
@@ -53,8 +55,9 @@ osTests = testGroup "OS Parsing Tests" . map testOSParser
 testOSParser :: OSTestCase -> TestTree
 testOSParser OSTC{..} = testCase tn $ do
   case parsed of
-    Nothing -> assertFailure "Can't produce OSResult"
-    Just OSResult{..} -> do
+    Nothing -> assertFailure ("Can't produce OSResult from " <> show ostcString)
+    Just r@OSResult{..} -> do
+     print r --TODO: drop
      assertEqual "family is same" ostcFamily osrFamily
      assertEqual "major is the same" ostcV1  osrV1
      assertEqual "minor is the same" ostcV2  osrV2
@@ -62,6 +65,12 @@ testOSParser OSTC{..} = testCase tn $ do
      assertEqual "patch_minor is the same" ostcV4 osrV4
   where
     parsed = parseOS ostcString
-    tn = T.unpack $ T.intercalate "/"
-         ["OS Test: ", ostcFamily, m ostcV1, m ostcV2, m ostcV3, m ostcV4]
+    tn = B.unpack ostcString <> " - " <> T.unpack summary
+    summary = T.intercalate "/" [ "OS Test: "
+                                , ostcFamily
+                                , m ostcV1
+                                , m ostcV2
+                                , m ostcV3
+                                , m ostcV4
+                                ]
     m x = maybe "-" id x
