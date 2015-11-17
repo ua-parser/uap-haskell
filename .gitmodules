@@ -1,6 +1,4 @@
-[submodule "uap-core"]
-	path = deps/uap-core
-	url = git@github.com:ua-parser/uap-core.git
 [submodule "deps/uap-core"]
 	path = deps/uap-core
-	url = git@github.com:ua-parser/uap-core.git
+	url = https://github.com/ua-parser/uap-core.git
+
