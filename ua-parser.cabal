@@ -1,14 +1,14 @@
-Name:                ua-parser
-Description:         Please refer to the git/github README on the project for example usage.
-Version:             0.6
-Synopsis:            A library for parsing User-Agent strings, official Haskell port of ua-parser
-License:             BSD3
-License-file:        LICENSE
-Author:              Ozgun Ataman
-Maintainer:          ozgun.ataman@soostone.com
-Category:            Web
-Build-type:          Simple
-Cabal-version:       >=1.8
+name:                ua-parser
+description:         Please refer to the git/github README on the project for example usage.
+version:             0.6
+synopsis:            A library for parsing User-Agent strings, official Haskell port of ua-parser
+license:             BSD3
+license-file:        LICENSE
+author:              Ozgun Ataman
+maintainer:          ozgun.ataman@soostone.com
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
 
 data-files: ./uap-core/*.yaml
 
@@ -17,12 +17,17 @@ source-repository head
   location: https://github.com/ua-parser/uap-haskell
   subdir:   haskell
 
-Library
+flag lib-Werror
+  default: False
+  manual: True
+
+library
   hs-source-dirs: src
+  default-language:    Haskell2010
   Exposed-modules:
     Web.UAParser
 
-  Build-depends:       
+  Build-depends:
       base             < 5
     , bytestring
     , text
@@ -33,32 +38,60 @@ Library
     , syb
     , file-embed       < 0.1
 
-  ghc-options: -O2 -Wall  
+  if flag(lib-Werror)
+    ghc-options: -Werror
 
+  ghc-options: -Wall
 
 test-suite test
   type: exitcode-stdio-1.0
-  main-is: TestSuite.hs
-  hs-source-dirs: src test/src
+  main-is: Main.hs
+  hs-source-dirs: src test
   ghc-options: -O2 -Wall -fwarn-tabs
+  default-language:    Haskell2010
 
-  Build-depends:       
+  if flag(lib-Werror)
+    ghc-options: -Werror
+
+  Build-depends:
       base
     , bytestring
     , text
-    , criterion
-    , deepseq
     , derive
     , HUnit
     , pcre-light
     , yaml >= 0.7
     , aeson
-    , test-framework
-    , test-framework-hunit
-    , test-framework-quickcheck2
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
     , data-default
     , syb
     , filepath
     , file-embed
 
+benchmark bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: bench, src
+  default-language:    Haskell2010
+  build-depends:
+                       base
+                     , ua-parser
+                     , criterion
+                     , deepseq
+                     , derive
+                     , bytestring
+                     , text
+                     , yaml
+                     , filepath
+                     , aeson
+                     , pcre-light
+                     , syb
+                     , file-embed
+                     , data-default
 
+  if flag(lib-Werror)
+    ghc-options: -Werror
+
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N

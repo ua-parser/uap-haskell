@@ -38,7 +38,7 @@ import           Text.Regex.PCRE.Light
                                 ---------------
 
 uaConfig :: UAConfig
-uaConfig = either error id $ decodeEither $(embedFile "uap-core/regexes.yaml")
+uaConfig = either error id $ decodeEither $(embedFile "deps/uap-core/regexes.yaml")
 {-# NOINLINE uaConfig #-}
 
 -------------------------------------------------------------------------------
@@ -201,7 +201,9 @@ instance FromJSON OSParser where
 
 -------------------------------------------------------------------------------
 instance FromJSON DevParser where
-    parseJSON (Object v) =
-      DevParser <$> parseRegex v
-                <*> v .:? "device_replacement"
+    parseJSON (Object v) = do
+      r <- parseRegex v
+      rep <- v .:? "device_replacement"
+      return (DevParser { devRegex = r
+                        , devRep = rep})
     parseJSON _ = error "Object expected when parsing JSON"
