@@ -35,10 +35,10 @@ testUAParser UATC{..} = testCase tn $ do
   case parsed of
     Nothing -> assertFailure ("Can't produce UAResult from " <> show uatcString)
     Just UAResult{..} -> do
-     assertEqual "family is same" uatcFamily uarFamily
-     -- assertEqual "v1 is the same" uatcV1 uarV1
-     -- assertEqual "v2 is the same" uatcV2 uarV2
-     -- assertEqual "v3 is the same" uatcV3 uarV3
+      assertEqual "family is same" uatcFamily uarFamily
+      assertEqual "v1 is the same" uatcV1 uarV1
+      assertEqual "v2 is the same" uatcV2 uarV2
+      assertEqual "v3 is the same" uatcV3 uarV3
   where
     parsed = parseUA uatcString
     tn = T.unpack $ T.intercalate "/" ["UA Test: ", uatcFamily, m uatcV1, m uatcV2, m uatcV3]
@@ -56,7 +56,7 @@ testOSParser :: OSTestCase -> TestTree
 testOSParser OSTC{..} = testCase tn $ do
   case parsed of
     Nothing -> assertFailure ("Can't produce OSResult from " <> show ostcString)
-    Just r@OSResult{..} -> do
+    Just OSResult{..} -> do
      assertEqual "family is same" ostcFamily osrFamily
      assertEqual "major is the same" ostcV1  osrV1
      assertEqual "minor is the same" ostcV2  osrV2

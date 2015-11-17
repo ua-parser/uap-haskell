@@ -37,10 +37,10 @@ data UserAgentTestCase = UATC {
 instance FromJSON UserAgentTestCase where
   parseJSON = withObject "UserAgentTestCase" parse
     where parse v = UATC <$> T.encodeUtf8 <$> v .: "user_agent_string"
-                         <*> (v .: "family" <|> return "")
-                         <*> (v .:? "v1" <|> return Nothing)
-                         <*> (v .:? "v2" <|> return Nothing)
-                         <*> (v .:? "v3" <|> return Nothing)
+                         <*> v .: "family"
+                         <*> v .:? "major"
+                         <*> v .:? "minor"
+                         <*> v .:? "patch"
 
 
 data OSTestCase = OSTC {
@@ -56,11 +56,11 @@ data OSTestCase = OSTC {
 instance FromJSON OSTestCase where
   parseJSON = withObject "OSTestCase" parse
     where parse v = OSTC <$> (T.encodeUtf8 <$> v .: "user_agent_string" <|> return "")
-                         <*> (v .: "family" <|> return "")
-                         <*> nonBlank (v .:? "major" <|> return Nothing)
-                         <*> nonBlank (v .:? "minor" <|> return Nothing)
-                         <*> nonBlank (v .:? "patch" <|> return Nothing)
-                         <*> nonBlank (v .:? "patch_minor" <|> return Nothing)
+                         <*> (v .: "family")
+                         <*> nonBlank (v .:? "major")
+                         <*> nonBlank (v .:? "minor")
+                         <*> nonBlank (v .:? "patch")
+                         <*> nonBlank (v .:? "patch_minor")
 
 nonBlank :: (Monad m) =>
             m (Maybe Text) -> m (Maybe Text)

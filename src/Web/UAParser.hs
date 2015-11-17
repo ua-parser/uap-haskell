@@ -51,13 +51,15 @@ parseUA bs = msum $ map go uaParsers
       go UAParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match uaRegex bs []
         where
-          mkRes [_,f,v1,v2,v3] = Just $ UAResult (repF f) (repV1 v1) (Just v2) (Just v3)
-          mkRes [_,f,v1,v2]    = Just $ UAResult (repF f) (repV1 v1) (Just v2) Nothing
-          mkRes [_,f,v1]       = Just $ UAResult (repF f) (repV1 v1) Nothing Nothing
-          mkRes [_,f]          = Just $ UAResult (repF f) uaV1Rep Nothing Nothing
+          mkRes [_,f,v1,v2,v3] = Just $ UAResult (repF f) (repV1 v1) (repV2 v2) (repV3 v3)
+          mkRes [_,f,v1,v2]    = Just $ UAResult (repF f) (repV1 v1) (repV2 v2) uaV3Rep
+          mkRes [_,f,v1]       = Just $ UAResult (repF f) (repV1 v1) uaV2Rep uaV3Rep
+          mkRes [_,f]          = Just $ UAResult (repF f) uaV1Rep uaV2Rep uaV3Rep
           mkRes _              = Nothing
 
           repV1 x = uaV1Rep `mplus` Just x
+          repV2 x = uaV2Rep `mplus` Just x
+          repV3 x = uaV3Rep `mplus` Just x
           repF x = maybe x id uaFamRep
 
 
@@ -100,17 +102,19 @@ parseOS bs = msum $ map go osParsers
       go OSParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match osRegex bs []
           where
-          mkRes [_,f,v1,v2,v3,v4] = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (Just v3) (Just v4)
-          mkRes [_,f,v1,v2,v3]    = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (Just v3) Nothing
-          mkRes [_,f,v1,v2]       = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) Nothing Nothing
-          mkRes [_,f,v1]          = Just $ OSResult (repF f) (repV1 v1) osRep2 Nothing Nothing
-          mkRes [_,f]             = Just $ OSResult (repF f) osRep1 osRep2 Nothing Nothing
+          mkRes [_,f,v1,v2,v3,v4] = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (repV3 v3) (repV4 v4)
+          mkRes [_,f,v1,v2,v3]    = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) (repV3 v3) osRep4
+          mkRes [_,f,v1,v2]       = Just $ OSResult (repF f) (repV1 v1) (repV2 v2) osRep3 osRep4
+          mkRes [_,f,v1]          = Just $ OSResult (repF f) (repV1 v1) osRep2 osRep3 osRep4
+          mkRes [_,f]             = Just $ OSResult (repF f) osRep1 osRep2 osRep3 osRep4
           mkRes _                 = Nothing
 
           repF x = maybe x id osFamRep
 
           repV1 x = osRep1 `mplus` Just x
           repV2 x = osRep2 `mplus` Just x
+          repV3 x = osRep3 `mplus` Just x
+          repV4 x = osRep4 `mplus` Just x
 
 
 -------------------------------------------------------------------------------
@@ -151,6 +155,8 @@ data UAParser = UAParser {
       uaRegex  :: Regex
     , uaFamRep :: Maybe Text
     , uaV1Rep  :: Maybe Text
+    , uaV2Rep  :: Maybe Text
+    , uaV3Rep  :: Maybe Text
     } deriving (Eq,Show)
 
 
@@ -160,12 +166,16 @@ data OSParser = OSParser {
     , osFamRep :: Maybe Text
     , osRep1   :: Maybe Text
     , osRep2   :: Maybe Text
+    , osRep3   :: Maybe Text
+    , osRep4   :: Maybe Text
     } deriving (Eq,Show)
 
 
 data DevParser = DevParser {
-      devRegex :: Regex
-    , devRep   :: Maybe Text
+      devRegex    :: Regex
+    , devRep      :: Maybe Text
+    , devBrandRep :: Maybe Text
+    , devModelRep :: Maybe Text
     } deriving (Eq,Show)
 
 
@@ -188,8 +198,10 @@ instance FromJSON UAConfig where
 instance FromJSON UAParser where
     parseJSON (Object v) =
       UAParser <$> parseRegex v
-               <*> (v .:? "family_replacement" <|> return Nothing)
-               <*> (v .:? "v1_replacement" <|> return Nothing)
+               <*> v .:? "family_replacement"
+               <*> v .:? "v1_replacement"
+               <*> v .:? "v2_replacement"
+               <*> v .:? "v3_replacement"
     parseJSON _ = error "Object expected when parsing JSON"
 
 
@@ -197,9 +209,11 @@ instance FromJSON UAParser where
 instance FromJSON OSParser where
     parseJSON (Object v) =
       OSParser <$> parseRegex v
-               <*> (v .:? "os_replacement" <|> return Nothing)
-               <*> (v .:? "os_v1_replacement" <|> return Nothing)
-               <*> (v .:? "os_v2_replacement" <|> return Nothing)
+               <*> v .:? "os_replacement"
+               <*> v .:? "os_v1_replacement"
+               <*> v .:? "os_v2_replacement"
+               <*> v .:? "os_v3_replacement"
+               <*> v .:? "os_v4_replacement"
     parseJSON _ = error "Object expected when parsing JSON"
 
 
@@ -208,6 +222,10 @@ instance FromJSON DevParser where
     parseJSON (Object v) = do
       r <- parseRegex v
       rep <- v .:? "device_replacement"
-      return (DevParser { devRegex = r
-                        , devRep = rep})
+      brandRep <- v .:? "brand_replacement"
+      modRep <- v .:? "model_replacement"
+      return (DevParser { devRegex    = r
+                        , devRep      = rep
+                        , devBrandRep = brandRep
+                        , devModelRep = modRep})
     parseJSON _ = error "Object expected when parsing JSON"
