@@ -17,10 +17,13 @@ import           Web.UAParser.SuiteUtils
 
 main :: IO ()
 main = do
-  uaCases <- loadTests "firefox_user_agent_strings.yaml"
-  osCases <- loadTests "additional_os_tests.yaml"
+  uaCases <- loadTests "test_resources/firefox_user_agent_strings.yaml"
+  osCases <- loadTests "test_resources/additional_os_tests.yaml"
+  --TODO: stop limiting once tests pass
+  devCases <- loadTests "tests/test_device.yaml"
   defaultMain $ testGroup "ua-parser" [ uaTests uaCases
                                       , osTests osCases
+                                      , devTests devCases
                                       ]
 
 
@@ -71,5 +74,28 @@ testOSParser OSTC{..} = testCase tn $ do
                                 , m ostcV2
                                 , m ostcV3
                                 , m ostcV4
+                                ]
+    m x = maybe "-" id x
+
+
+-------------------------------------------------------------------------------
+-- Dev Testing
+devTests :: [DevTestCase] -> TestTree
+devTests = testGroup "Dev Parsing Tests" . map testDevParser
+
+
+-------------------------------------------------------------------------------
+testDevParser :: DevTestCase -> TestTree
+testDevParser DTC{..} = testCase tn $ do
+  assertEqual "family is same" dtcFamily drFamily
+  assertEqual "brand is the same" dtcBrand drBrand
+  assertEqual "model is the same" dtcModel drModel
+  where
+    DevResult {..} = parseDevLenient dtcString
+    tn = B.unpack dtcString <> " - " <> T.unpack summary
+    summary = T.intercalate "/" [ "Dev Test: "
+                                , dtcFamily
+                                , m dtcBrand
+                                , m dtcModel
                                 ]
     m x = maybe "-" id x

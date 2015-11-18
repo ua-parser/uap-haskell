@@ -14,6 +14,11 @@ module Web.UAParser
     , parseOS
     , OSResult (..)
     , osrVersion
+
+      -- * Parsing Dev
+    , parseDev
+    , parseDevLenient
+    , DevResult (..)
     ) where
 
 -------------------------------------------------------------------------------
@@ -25,6 +30,7 @@ import           Data.Default
 import           Data.FileEmbed
 import           Data.Generics
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -33,13 +39,13 @@ import           Text.Regex.PCRE.Light
 -------------------------------------------------------------------------------
 
 
-                                ---------------
-                                -- UA Parser --
-                                ---------------
-
+-------------------------------------------------------------------------------
+-- UA Parser
+-------------------------------------------------------------------------------
 uaConfig :: UAConfig
 uaConfig = either error id $ decodeEither $(embedFile "deps/uap-core/regexes.yaml")
 {-# NOINLINE uaConfig #-}
+
 
 -------------------------------------------------------------------------------
 -- | Parse a given User-Agent string
@@ -84,7 +90,6 @@ uarVersion UAResult{..} =
 -------------------------------------------------------------------------------
 instance Default UAResult where
     def = UAResult "" Nothing Nothing Nothing
-
 
 
 -------------------------------------------------------------------------------
@@ -137,11 +142,90 @@ osrVersion :: OSResult -> Text
 osrVersion OSResult{..} =
     T.intercalate "." . catMaybes . takeWhile isJust $ [osrV1, osrV2, osrV3, osrV4]
 
-                              -------------------
-                              -- Parser Config --
-                              -------------------
 
 -------------------------------------------------------------------------------
+-- Dev Parser
+-------------------------------------------------------------------------------
+-- | Parser that, upon failure to match a pattern returns a result of
+-- family "Other" with all other fields blank. This is mainly for
+-- compatibility with the uap-core test suite
+parseDevLenient :: ByteString -> DevResult
+parseDevLenient = fromMaybe def . parseDev
+
+
+parseDev :: ByteString -> Maybe DevResult
+parseDev bs = msum $ map go devParsers
+    where
+      UAConfig{..} = uaConfig
+
+      go DevParser{..} = either (const Nothing) mkRes
+                       . mapM T.decodeUtf8' =<< match devRegex bs []
+        where
+          mkRes caps@(_:f:b:m:_) = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps (Just m))
+          mkRes caps@[_,f,b]   = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps Nothing)
+          mkRes caps@[_,f]     = Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
+          mkRes caps@[f]       = Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
+          mkRes _         = Nothing
+
+          mkDR a b c = DevResult (T.strip a) (strip' =<< b) (strip' =<< c)
+
+          strip' t  = case T.strip t of
+                        "" -> Nothing
+                        t' -> Just t'
+
+          --TODO: update other replacers to be like this if it works
+          --TODO: some patterns don't capture so you should match on [f]
+          repBrand caps x = maybe x Just (makeReplacements caps <$> devBrandRep)
+          -- This technique is used in the python ua-parser. It isn't
+          -- clear if there's a precedent in the spec but it clears up
+          -- some remote edge cases (which may be test suite bugs TBH).
+          repModel caps x = maybe (x <|> firstCap) Just (makeReplacements caps <$> devModelRep)
+            where firstCap = case caps of
+                               _:a:_ -> Just a
+                               _     -> Nothing
+
+          --TODO: tryrep this
+          repF caps x = maybe x (makeReplacements caps) devFamRep
+
+
+-------------------------------------------------------------------------------
+-- | Replace replacement placeholders with captures and remove any
+-- that are unused. Goes up to $4 as per the spec
+makeReplacements
+    :: [Text]
+    -- ^ Captures
+    -> Text
+    -- ^ Replacement text with 1-indexed replace points ($1, $2, $3 or $4)
+    -> Text
+makeReplacements (_:cs) t = makeReplacements' (zip ([1..4] :: [Int]) (cs ++ repeat "")) t
+  where makeReplacements' [] acc = acc
+        makeReplacements' ((idx, cap):caps) acc = let acc' = T.replace ("$" <> showT idx) cap acc
+                                        in makeReplacements' caps acc'
+makeReplacements _ t = t
+
+
+-------------------------------------------------------------------------------
+showT :: Show a => a -> Text
+showT = T.pack . show
+
+
+-------------------------------------------------------------------------------
+-- | Result type for 'parseDev'
+data DevResult = DevResult {
+      drFamily :: Text
+    , drBrand  :: Maybe Text
+    , drModel  :: Maybe Text
+    } deriving (Show,Read,Eq,Typeable,Data)
+
+
+instance Default DevResult where
+    def = DevResult "Other" Nothing Nothing
+
+
+-------------------------------------------------------------------------------
+-- Parser Config
+-------------------------------------------------------------------------------
+
 -- | User-Agent string parser data
 data UAConfig = UAConfig {
       uaParsers  :: [UAParser]
@@ -171,9 +255,10 @@ data OSParser = OSParser {
     } deriving (Eq,Show)
 
 
+-------------------------------------------------------------------------------
 data DevParser = DevParser {
       devRegex    :: Regex
-    , devRep      :: Maybe Text
+    , devFamRep   :: Maybe Text
     , devBrandRep :: Maybe Text
     , devModelRep :: Maybe Text
     } deriving (Eq,Show)
@@ -181,7 +266,13 @@ data DevParser = DevParser {
 
 -------------------------------------------------------------------------------
 parseRegex :: Object -> Parser Regex
-parseRegex v = flip compile [] `liftM` (T.encodeUtf8 <$> v .: "regex")
+parseRegex v = do
+  pat <- v .: "regex"
+  flag <- v .:? "regex_flag" :: Parser (Maybe Text)
+  let flags = case flag of
+                Just "i" -> [caseless]
+                _        -> []
+  return (compile (T.encodeUtf8 pat) flags)
 
 
 -------------------------------------------------------------------------------
@@ -221,11 +312,11 @@ instance FromJSON OSParser where
 instance FromJSON DevParser where
     parseJSON (Object v) = do
       r <- parseRegex v
-      rep <- v .:? "device_replacement"
+      fam <- v .:? "device_replacement"
       brandRep <- v .:? "brand_replacement"
       modRep <- v .:? "model_replacement"
       return (DevParser { devRegex    = r
-                        , devRep      = rep
+                        , devFamRep    = fam
                         , devBrandRep = brandRep
                         , devModelRep = modRep})
     parseJSON _ = error "Object expected when parsing JSON"

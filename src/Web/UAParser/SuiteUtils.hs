@@ -2,6 +2,7 @@
 module Web.UAParser.SuiteUtils
     ( UserAgentTestCase(..)
     , OSTestCase(..)
+    , DevTestCase(..)
     , loadTests
     ) where
 
@@ -9,22 +10,23 @@ module Web.UAParser.SuiteUtils
 -------------------------------------------------------------------------------
 import           Control.Applicative
 import           Data.Aeson
-import           Data.ByteString       (ByteString)
-import           Data.Text             (Text)
-import qualified Data.Text.Encoding    as T
+import           Data.ByteString     (ByteString)
+import           Data.Text           (Text)
+import qualified Data.Text.Encoding  as T
 import           Data.Yaml
 import           System.FilePath
 -------------------------------------------------------------------------------
 
 
 -- Loading Test Cases
-
 loadTests :: FromJSON a => FilePath -> IO a
 loadTests fp = parseMonad p =<< either (error . show) id `fmap` decodeFileEither fp'
   where
-    fp' = "deps/uap-core/test_resources" </> fp
+    fp' = "deps/uap-core" </> fp
     p = withObject "Value" $ \x -> x .: "test_cases"
 
+
+-------------------------------------------------------------------------------
 data UserAgentTestCase = UATC {
       uatcString :: ByteString
     , uatcFamily :: Text
@@ -43,6 +45,7 @@ instance FromJSON UserAgentTestCase where
                          <*> v .:? "patch"
 
 
+-------------------------------------------------------------------------------
 data OSTestCase = OSTC {
       ostcString :: ByteString
     , ostcFamily :: Text
@@ -56,7 +59,7 @@ data OSTestCase = OSTC {
 instance FromJSON OSTestCase where
   parseJSON = withObject "OSTestCase" parse
     where parse v = OSTC <$> (T.encodeUtf8 <$> v .: "user_agent_string" <|> return "")
-                         <*> (v .: "family")
+                         <*> v .: "family"
                          <*> nonBlank (v .:? "major")
                          <*> nonBlank (v .:? "minor")
                          <*> nonBlank (v .:? "patch")
@@ -72,4 +75,18 @@ nonBlank f = do
     Nothing -> Nothing
 
 
+-------------------------------------------------------------------------------
+data DevTestCase = DTC {
+      dtcString :: ByteString
+    , dtcFamily :: Text
+    , dtcBrand  :: Maybe Text
+    , dtcModel  :: Maybe Text
+    } deriving (Show, Eq)
 
+
+instance FromJSON DevTestCase where
+  parseJSON = withObject "DevTestCase" parse
+    where parse o = DTC <$> (T.encodeUtf8 <$> o .: "user_agent_string")
+                        <*> o .: "family"
+                        <*> nonBlank (o .:? "brand")
+                        <*> nonBlank (o .:? "model")
