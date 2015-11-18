@@ -38,8 +38,6 @@ import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import           Data.Yaml
 import           Text.Regex.PCRE.Light
-
-import           Debug.Trace
 -------------------------------------------------------------------------------
 
 
@@ -69,16 +67,16 @@ parseUA bs = msum $ map go uaParsers
       go UAParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match uaRegex bs []
         where
-          mkRes caps@(_:f:v1:v2:v3:_) = Just $ UAResult (repF caps f) (repV1 v1) (repV2 v2) (repV3 v3)
-          mkRes caps@[_,f,v1,v2]      = Just $ UAResult (repF caps f) (repV1 v1) (repV2 v2) uaV3Rep
-          mkRes caps@[_,f,v1]         = Just $ UAResult (repF caps f) (repV1 v1) uaV2Rep uaV3Rep
-          mkRes caps@[_,f]            = Just $ UAResult (repF caps f) uaV1Rep uaV2Rep uaV3Rep
-          mkRes caps@[f]              = Just $ UAResult (repF caps f) uaV1Rep uaV2Rep uaV3Rep
+          mkRes caps@(_:f:v1:v2:v3:_) = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3))
+          mkRes caps@[_,f,v1,v2]      = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps Nothing)
+          mkRes caps@[_,f,v1]         = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps Nothing) (repV3 caps Nothing)
+          mkRes caps@[_,f]            = Just $ UAResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing)
+          mkRes caps@[f]              = Just $ UAResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing)
           mkRes _                     = Nothing
 
-          repV1 x = uaV1Rep `mplus` Just x
-          repV2 x = uaV2Rep `mplus` Just x
-          repV3 x = uaV3Rep `mplus` Just x
+          repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> uaV1Rep)
+          repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> uaV2Rep)
+          repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> uaV3Rep)
 
           repF caps x = maybe x (makeReplacements caps) uaFamRep
 
@@ -123,24 +121,23 @@ parseOS bs = msum $ map go osParsers
     where
       UAConfig{..} = uaConfig
 
-      go OSParser{..} = either (const Nothing) (\cs -> traceShow ("cs" :: String, cs) (mkRes cs))
+      go OSParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match osRegex bs []
          where
-         mkRes caps@(_:f:v1:v2:v3:v4:_) = Just $ OSResult (repF caps f) (repV1 v1) (repV2 v2) (repV3 v3) (repV4 v4)
-         mkRes caps@[_,f,v1,v2,v3]      = Just $ OSResult (repF caps f) (repV1 v1) (repV2 v2) (repV3 v3) osRep4
-         mkRes caps@[_,f,v1,v2]         = Just $ OSResult (repF caps f) (repV1 v1) (repV2 v2) osRep3 osRep4
-         mkRes caps@[_,f,v1]            = Just $ OSResult (repF caps f) (repV1 v1) osRep2 osRep3 osRep4
-         mkRes caps@[_,f]               = Just $ OSResult (repF caps f) osRep1 osRep2 osRep3 osRep4
-         mkRes caps@[f]                 = Just $ OSResult (repF caps f) osRep1 osRep2 osRep3 osRep4
+         mkRes caps@(_:f:v1:v2:v3:v4:_) = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3)) (repV4 caps (Just v4))
+         mkRes caps@[_,f,v1,v2,v3]      = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3)) (repV4 caps Nothing)
+         mkRes caps@[_,f,v1,v2]         = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[_,f,v1]            = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[_,f]               = Just $ OSResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[f]                 = Just $ OSResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
          mkRes _                   = Nothing
 
          repF caps x = maybe x (makeReplacements caps) osFamRep
 
-         repV1 x = osRep1 `mplus` Just x
-         repV2 x = osRep2 `mplus` Just x
-         repV3 x = osRep3 `mplus` Just x
-         repV4 x = osRep4 `mplus` Just x
-
+         repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> osRep1)
+         repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> osRep2)
+         repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> osRep3)
+         repV4 caps x = maybe (x <|> caps `at` 5) Just (makeReplacements caps <$> osRep4)
 
 -------------------------------------------------------------------------------
 -- | Result type for 'parseOS'
