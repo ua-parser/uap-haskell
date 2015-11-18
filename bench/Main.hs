@@ -17,7 +17,7 @@ import           Web.UAParser.SuiteUtils
 
 main :: IO ()
 main = do
-  cases <- loadTests "firefox_user_agent_strings.yaml"
+  cases <- loadTests "test_resources/firefox_user_agent_strings.yaml"
   let ua = bench "UA Parsing" $ nf (map (parseUA . uatcString)) cases
   print $ show (length cases) ++ " strings being parsed."
   defaultMain [ua]
