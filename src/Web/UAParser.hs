@@ -7,13 +7,20 @@
 module Web.UAParser
     ( -- * Parsing browser (user agent)
       parseUA
+    , parseUALenient
     , UAResult (..)
     , uarVersion
 
       -- * Parsing OS
     , parseOS
+    , parseOSLenient
     , OSResult (..)
     , osrVersion
+
+      -- * Parsing Dev
+    , parseDev
+    , parseDevLenient
+    , DevResult (..)
     ) where
 
 -------------------------------------------------------------------------------
@@ -25,6 +32,7 @@ import           Data.Default
 import           Data.FileEmbed
 import           Data.Generics
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -33,27 +41,21 @@ import           Text.Regex.PCRE.Light
 -------------------------------------------------------------------------------
 
 
-test :: [ByteString]
-test =
-  ["SonyEricssonK750i/R1L Browser/SEMC-Browser/4.2 Profile/MIDP-2.0 Configuration/CLDC-1.1"
-  , "Mozilla/5.0 (Windows; U; Windows NT 5.2; en-GB; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18"
-  , "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_5; en-us) AppleWebKit/525.26.2 (KHTML, like Gecko) Version/3.2 Safari/525.26.12'"
-  , "Mozilla/4.0 (compatible; MSIE 6.0; Windows XP 5.1) Lobo/0.98.4"
-  , "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; )'"
-  , "Opera/9.80 (Windows NT 5.1; U; cs) Presto/2.2.15 Version/10.00'"
-  , "boxee (alpha/Darwin 8.7.1 i386 - 0.9.11.5591)'"
-  , "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; CSM-NEWUSER; GTB6; byond_4.0; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; .NET CLR 1.1.4322; .NET CLR 3.0.04506.648; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; InfoPath.1)'"
-  , "Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)'"
-  ]
-
-
-                                ---------------
-                                -- UA Parser --
-                                ---------------
-
+-------------------------------------------------------------------------------
+-- UA Parser
+-------------------------------------------------------------------------------
 uaConfig :: UAConfig
-uaConfig = either error id $ decodeEither $(embedFile "regexes.yaml")
+uaConfig = either error id $ decodeEither $(embedFile "deps/uap-core/regexes.yaml")
 {-# NOINLINE uaConfig #-}
+
+
+-------------------------------------------------------------------------------
+-- | Parser that, upon failure to match a pattern returns a result of
+-- family "Other" with all other fields blank. This is mainly for
+-- compatibility with the uap-core test suite
+parseUALenient :: ByteString -> UAResult
+parseUALenient = fromMaybe def . parseUA
+
 
 -------------------------------------------------------------------------------
 -- | Parse a given User-Agent string
@@ -65,14 +67,18 @@ parseUA bs = msum $ map go uaParsers
       go UAParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match uaRegex bs []
         where
-          mkRes [_,f,v1,v2,v3] = Just $ UAResult (repF f) (repV1 v1) (Just v2) (Just v3)
-          mkRes [_,f,v1,v2]    = Just $ UAResult (repF f) (repV1 v1) (Just v2) Nothing
-          mkRes [_,f,v1]       = Just $ UAResult (repF f) (repV1 v1) Nothing   Nothing
-          mkRes [_,f]          = Just $ UAResult (repF f) Nothing    Nothing   Nothing
-          mkRes _              = Nothing
+          mkRes caps@(_:f:v1:v2:v3:_) = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3))
+          mkRes caps@[_,f,v1,v2]      = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps Nothing)
+          mkRes caps@[_,f,v1]         = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps Nothing) (repV3 caps Nothing)
+          mkRes caps@[_,f]            = Just $ UAResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing)
+          mkRes caps@[f]              = Just $ UAResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing)
+          mkRes _                     = Nothing
 
-          repV1 x = uaV1Rep `mplus` Just x
-          repF x = maybe x id uaFamRep
+          repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> uaV1Rep)
+          repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> uaV2Rep)
+          repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> uaV3Rep)
+
+          repF caps x = maybe x (makeReplacements caps) uaFamRep
 
 
 
@@ -95,13 +101,18 @@ uarVersion UAResult{..} =
 
 -------------------------------------------------------------------------------
 instance Default UAResult where
-    def = UAResult "" Nothing Nothing Nothing
+    def = UAResult "Other" Nothing Nothing Nothing
 
 
+-------------------------------------------------------------------------------
+-- OS Parser
+-------------------------------------------------------------------------------
+-- | Parser that, upon failure to match a pattern returns a result of
+-- family "Other" with all other fields blank. This is mainly for
+-- compatibility with the uap-core test suite
+parseOSLenient :: ByteString -> OSResult
+parseOSLenient = fromMaybe def . parseOS
 
-                                ---------------
-                                -- OS Parser --
-                                ---------------
 
 -------------------------------------------------------------------------------
 -- | Parse OS from given User-Agent string
@@ -112,16 +123,21 @@ parseOS bs = msum $ map go osParsers
 
       go OSParser{..} = either (const Nothing) mkRes
                       . mapM T.decodeUtf8' =<< match osRegex bs []
-          where
-          mkRes [_,f,v1,v2,v3,v4] = Just $ OSResult (repF f) (Just v1) (Just v2) (Just v3) (Just v4)
-          mkRes [_,f,v1,v2,v3]    = Just $ OSResult (repF f) (Just v1) (Just v2) (Just v3) Nothing
-          mkRes [_,f,v1,v2]       = Just $ OSResult (repF f) (Just v1) (Just v2) Nothing   Nothing
-          mkRes [_,f,v1]          = Just $ OSResult (repF f) (Just v1) Nothing   Nothing   Nothing
-          mkRes [_,f]             = Just $ OSResult (repF f) Nothing   Nothing   Nothing   Nothing
-          mkRes _                 = Nothing
+         where
+         mkRes caps@(_:f:v1:v2:v3:v4:_) = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3)) (repV4 caps (Just v4))
+         mkRes caps@[_,f,v1,v2,v3]      = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3)) (repV4 caps Nothing)
+         mkRes caps@[_,f,v1,v2]         = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[_,f,v1]            = Just $ OSResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[_,f]               = Just $ OSResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes caps@[f]                 = Just $ OSResult (repF caps f) (repV1 caps Nothing) (repV2 caps Nothing) (repV3 caps Nothing) (repV4 caps Nothing)
+         mkRes _                   = Nothing
 
-          repF x = maybe x id osFamRep
+         repF caps x = maybe x (makeReplacements caps) osFamRep
 
+         repV1 caps x = maybe (x <|> caps `at` 2) Just (makeReplacements caps <$> osRep1)
+         repV2 caps x = maybe (x <|> caps `at` 3) Just (makeReplacements caps <$> osRep2)
+         repV3 caps x = maybe (x <|> caps `at` 4) Just (makeReplacements caps <$> osRep3)
+         repV4 caps x = maybe (x <|> caps `at` 5) Just (makeReplacements caps <$> osRep4)
 
 -------------------------------------------------------------------------------
 -- | Result type for 'parseOS'
@@ -134,7 +150,7 @@ data OSResult = OSResult {
     } deriving (Show,Read,Eq,Typeable,Data)
 
 instance Default OSResult where
-    def = OSResult "" Nothing Nothing Nothing Nothing
+    def = OSResult "Other" Nothing Nothing Nothing Nothing
 
 
 -------------------------------------------------------------------------------
@@ -143,11 +159,87 @@ osrVersion :: OSResult -> Text
 osrVersion OSResult{..} =
     T.intercalate "." . catMaybes . takeWhile isJust $ [osrV1, osrV2, osrV3, osrV4]
 
-                              -------------------
-                              -- Parser Config --
-                              -------------------
 
 -------------------------------------------------------------------------------
+-- Dev Parser
+-------------------------------------------------------------------------------
+-- | Parser that, upon failure to match a pattern returns a result of
+-- family "Other" with all other fields blank. This is mainly for
+-- compatibility with the uap-core test suite
+parseDevLenient :: ByteString -> DevResult
+parseDevLenient = fromMaybe def . parseDev
+
+
+-------------------------------------------------------------------------------
+parseDev :: ByteString -> Maybe DevResult
+parseDev bs = msum $ map go devParsers
+    where
+      UAConfig{..} = uaConfig
+
+      go DevParser{..} = either (const Nothing) mkRes
+                       . mapM T.decodeUtf8' =<< match devRegex bs []
+        where
+          mkRes caps@(_:f:b:m:_) = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps (Just m))
+          mkRes caps@[_,f,b]   = Just $ mkDR (repF caps f) (repBrand caps (Just b)) (repModel caps Nothing)
+          mkRes caps@[_,f]     = Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
+          mkRes caps@[f]       = Just $ mkDR (repF caps f) (repBrand caps Nothing) (repModel caps Nothing)
+          mkRes _         = Nothing
+
+          mkDR a b c = DevResult (T.strip a) (strip' =<< b) (strip' =<< c)
+
+          strip' t  = case T.strip t of
+                        "" -> Nothing
+                        t' -> Just t'
+
+          --TODO: update other replacers to be like this if it works
+          --TODO: some patterns don't capture so you should match on [f]
+          repBrand caps x = maybe x Just (makeReplacements caps <$> devBrandRep)
+          -- This technique is used in the python ua-parser. It isn't
+          -- clear if there's a precedent in the spec but it clears up
+          -- some remote edge cases (which may be test suite bugs TBH).
+          repModel caps x = maybe (x <|> caps `at` 1) Just (makeReplacements caps <$> devModelRep)
+
+          repF caps x = maybe x (makeReplacements caps) devFamRep
+
+
+-------------------------------------------------------------------------------
+-- | Replace replacement placeholders with captures and remove any
+-- that are unused. Goes up to $4 as per the spec
+makeReplacements
+    :: [Text]
+    -- ^ Captures
+    -> Text
+    -- ^ Replacement text with 1-indexed replace points ($1, $2, $3 or $4)
+    -> Text
+makeReplacements (_:cs) t = makeReplacements' (zip ([1..4] :: [Int]) (cs ++ repeat "")) t
+  where makeReplacements' [] acc = acc
+        makeReplacements' ((idx, cap):caps) acc = let acc' = T.replace ("$" <> showT idx) cap acc
+                                        in makeReplacements' caps acc'
+makeReplacements _ t = t
+
+
+-------------------------------------------------------------------------------
+showT :: Show a => a -> Text
+showT = T.pack . show
+
+
+-------------------------------------------------------------------------------
+-- | Result type for 'parseDev'
+data DevResult = DevResult {
+      drFamily :: Text
+    , drBrand  :: Maybe Text
+    , drModel  :: Maybe Text
+    } deriving (Show,Read,Eq,Typeable,Data)
+
+
+instance Default DevResult where
+    def = DevResult "Other" Nothing Nothing
+
+
+-------------------------------------------------------------------------------
+-- Parser Config
+-------------------------------------------------------------------------------
+
 -- | User-Agent string parser data
 data UAConfig = UAConfig {
       uaParsers  :: [UAParser]
@@ -161,6 +253,8 @@ data UAParser = UAParser {
       uaRegex  :: Regex
     , uaFamRep :: Maybe Text
     , uaV1Rep  :: Maybe Text
+    , uaV2Rep  :: Maybe Text
+    , uaV3Rep  :: Maybe Text
     } deriving (Eq,Show)
 
 
@@ -170,18 +264,29 @@ data OSParser = OSParser {
     , osFamRep :: Maybe Text
     , osRep1   :: Maybe Text
     , osRep2   :: Maybe Text
+    , osRep3   :: Maybe Text
+    , osRep4   :: Maybe Text
     } deriving (Eq,Show)
 
 
+-------------------------------------------------------------------------------
 data DevParser = DevParser {
-      devRegex :: Regex
-    , devRep   :: Maybe Text
+      devRegex    :: Regex
+    , devFamRep   :: Maybe Text
+    , devBrandRep :: Maybe Text
+    , devModelRep :: Maybe Text
     } deriving (Eq,Show)
 
 
 -------------------------------------------------------------------------------
 parseRegex :: Object -> Parser Regex
-parseRegex v = flip compile [] `liftM` (T.encodeUtf8 <$> v .: "regex")
+parseRegex v = do
+  pat <- v .: "regex"
+  flag <- v .:? "regex_flag" :: Parser (Maybe Text)
+  let flags = case flag of
+                Just "i" -> [caseless]
+                _        -> []
+  return (compile (T.encodeUtf8 pat) flags)
 
 
 -------------------------------------------------------------------------------
@@ -198,8 +303,10 @@ instance FromJSON UAConfig where
 instance FromJSON UAParser where
     parseJSON (Object v) =
       UAParser <$> parseRegex v
-               <*> (v .:? "family_replacement" <|> return Nothing)
-               <*> (v .:? "v1_replacement" <|> return Nothing)
+               <*> v .:? "family_replacement"
+               <*> v .:? "v1_replacement"
+               <*> v .:? "v2_replacement"
+               <*> v .:? "v3_replacement"
     parseJSON _ = error "Object expected when parsing JSON"
 
 
@@ -207,15 +314,32 @@ instance FromJSON UAParser where
 instance FromJSON OSParser where
     parseJSON (Object v) =
       OSParser <$> parseRegex v
-               <*> (v .:? "os_replacement" <|> return Nothing)
-               <*> (v .:? "os_v1_replacement" <|> return Nothing)
-               <*> (v .:? "os_v2_replacement" <|> return Nothing)
+               <*> v .:? "os_replacement"
+               <*> v .:? "os_v1_replacement"
+               <*> v .:? "os_v2_replacement"
+               <*> v .:? "os_v3_replacement"
+               <*> v .:? "os_v4_replacement"
     parseJSON _ = error "Object expected when parsing JSON"
 
 
 -------------------------------------------------------------------------------
 instance FromJSON DevParser where
-    parseJSON (Object v) =
-      DevParser <$> parseRegex v
-                <*> v .:? "device_replacement"
+    parseJSON (Object v) = do
+      r <- parseRegex v
+      fam <- v .:? "device_replacement"
+      brandRep <- v .:? "brand_replacement"
+      modRep <- v .:? "model_replacement"
+      return (DevParser { devRegex    = r
+                        , devFamRep    = fam
+                        , devBrandRep = brandRep
+                        , devModelRep = modRep})
     parseJSON _ = error "Object expected when parsing JSON"
+
+
+-------------------------------------------------------------------------------
+at :: [a] -> Int -> Maybe a
+at [] _ = Nothing
+at (a:_) 0 = Just a
+at (_:as) n
+  | n > 0     = at as (pred n)
+  | otherwise = Nothing
