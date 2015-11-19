@@ -42,7 +42,6 @@ library
     , yaml             >= 0.7 && < 0.9
     , aeson            >= 0.7 && < 0.9
     , data-default
-    , syb
     , file-embed       < 0.1
 
   if flag(lib-Werror)
@@ -73,7 +72,6 @@ test-suite test
     , tasty-hunit
     , tasty-quickcheck
     , data-default
-    , syb
     , filepath
     , file-embed
 
@@ -94,7 +92,6 @@ benchmark bench
                      , filepath
                      , aeson
                      , pcre-light
-                     , syb
                      , file-embed
                      , data-default
 

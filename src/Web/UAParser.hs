@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable        #-}
+{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE RecordWildCards           #-}
@@ -28,15 +29,16 @@ import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson
 import           Data.ByteString.Char8 (ByteString)
+import           Data.Data
 import           Data.Default
 import           Data.FileEmbed
-import           Data.Generics
 import           Data.Maybe
 import           Data.Monoid
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
 import           Data.Yaml
+import           GHC.Generics
 import           Text.Regex.PCRE.Light
 -------------------------------------------------------------------------------
 
@@ -89,7 +91,7 @@ data UAResult = UAResult {
     , uarV1     :: Maybe Text
     , uarV2     :: Maybe Text
     , uarV3     :: Maybe Text
-    } deriving (Show, Read, Eq, Typeable, Data)
+    } deriving (Show, Read, Eq, Typeable, Data, Generic)
 
 
 -------------------------------------------------------------------------------
@@ -147,7 +149,7 @@ data OSResult = OSResult {
     , osrV2     :: Maybe Text
     , osrV3     :: Maybe Text
     , osrV4     :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic)
 
 instance Default OSResult where
     def = OSResult "Other" Nothing Nothing Nothing Nothing
@@ -229,7 +231,7 @@ data DevResult = DevResult {
       drFamily :: Text
     , drBrand  :: Maybe Text
     , drModel  :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic)
 
 
 instance Default DevResult where
