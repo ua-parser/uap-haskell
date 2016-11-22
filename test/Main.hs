@@ -23,7 +23,6 @@ main = do
                                           ,"tests/test_ua.yaml"]
   osCases <- mconcat <$> mapM loadTests [ "test_resources/additional_os_tests.yaml"
                                         , "tests/test_os.yaml" ]
-  --TODO: stop limiting once tests pass
   devCases <- loadTests "tests/test_device.yaml"
   defaultMain $ testGroup "ua-parser" [ uaTests uaCases
                                       , osTests osCases
