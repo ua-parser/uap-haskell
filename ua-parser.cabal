@@ -14,6 +14,8 @@ tested-with:         GHC == 7.6.3
                    , GHC == 7.10.2
 
 extra-source-files: src/Web/UAParser/SuiteUtils.hs
+                    README.md
+                    changelog.md
 
 data-files: ./deps/uap-core/*.yaml
             ./deps/uap-core/test_resources/*.yaml
