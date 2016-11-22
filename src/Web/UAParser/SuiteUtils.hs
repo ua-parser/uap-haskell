@@ -9,11 +9,13 @@ module Web.UAParser.SuiteUtils
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
-import           Data.Aeson
+import           Control.Monad       (join)
+import           Data.Aeson          hiding ((.:?))
+import qualified Data.Aeson          as A
 import           Data.ByteString     (ByteString)
 import           Data.Text           (Text)
 import qualified Data.Text.Encoding  as T
-import           Data.Yaml
+import           Data.Yaml           hiding ((.:?))
 import           System.FilePath
 -------------------------------------------------------------------------------
 
@@ -90,3 +92,10 @@ instance FromJSON DevTestCase where
                         <*> o .: "family"
                         <*> nonBlank (o .:? "brand")
                         <*> nonBlank (o .:? "model")
+
+
+-------------------------------------------------------------------------------
+-- | Backport a more lenient version of .:? from newer versions of
+-- aeson. It accepts an explicit null as well as an omitted field.
+(.:?) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
+o .:? k = join <$> (o A..:? k)

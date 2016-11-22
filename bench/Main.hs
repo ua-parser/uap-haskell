@@ -6,10 +6,9 @@ module Main
 
 
 -------------------------------------------------------------------------------
-import           Control.Applicative
+import           Control.Applicative     as A
 import           Control.DeepSeq
 import           Criterion.Main
-import           Data.DeriveTH
 -------------------------------------------------------------------------------
 import           Web.UAParser
 import           Web.UAParser.SuiteUtils
@@ -18,7 +17,7 @@ import           Web.UAParser.SuiteUtils
 
 main :: IO ()
 main = do
-  uas <- take 100 <$> loadTests "test_resources/firefox_user_agent_strings.yaml"
+  uas <- take 100 A.<$> loadTests "test_resources/firefox_user_agent_strings.yaml"
   oses <- take 100 <$> loadTests "test_resources/additional_os_tests.yaml"
   devs <- take 100 <$> loadTests "tests/test_device.yaml"
   defaultMain [ bench "Parsing 100 UAs" $ nf (map (parseUA . uatcString)) uas
@@ -27,4 +26,6 @@ main = do
               ]
 
 
-$(derives [makeNFData] [''UAResult, ''OSResult, ''DevResult])
+instance NFData UAResult
+instance NFData OSResult
+instance NFData DevResult

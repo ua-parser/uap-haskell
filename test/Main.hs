@@ -4,7 +4,7 @@ module Main where
 
 
 -------------------------------------------------------------------------------
-import           Control.Applicative
+import           Control.Applicative     as A
 import qualified Data.ByteString.Char8   as B
 import           Data.Monoid
 import qualified Data.Text               as T
@@ -18,12 +18,11 @@ import           Web.UAParser.SuiteUtils
 
 main :: IO ()
 main = do
-  uaCases <- mconcat <$> mapM loadTests ["test_resources/firefox_user_agent_strings.yaml"
-                                        ,"test_resources/pgts_browser_list.yaml"
-                                        ,"tests/test_ua.yaml"]
+  uaCases <- mconcat A.<$> mapM loadTests ["test_resources/firefox_user_agent_strings.yaml"
+                                          ,"test_resources/pgts_browser_list.yaml"
+                                          ,"tests/test_ua.yaml"]
   osCases <- mconcat <$> mapM loadTests [ "test_resources/additional_os_tests.yaml"
                                         , "tests/test_os.yaml" ]
-  --TODO: stop limiting once tests pass
   devCases <- loadTests "tests/test_device.yaml"
   defaultMain $ testGroup "ua-parser" [ uaTests uaCases
                                       , osTests osCases
