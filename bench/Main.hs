@@ -9,7 +9,6 @@ module Main
 import           Control.Applicative     as A
 import           Control.DeepSeq
 import           Criterion.Main
-import           Data.DeriveTH
 -------------------------------------------------------------------------------
 import           Web.UAParser
 import           Web.UAParser.SuiteUtils
@@ -27,4 +26,6 @@ main = do
               ]
 
 
-$(derives [makeNFData] [''UAResult, ''OSResult, ''DevResult])
+instance NFData UAResult
+instance NFData OSResult
+instance NFData DevResult
