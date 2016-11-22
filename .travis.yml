@@ -19,7 +19,7 @@ env:
 - ARGS="--resolver=lts-5"
 - ARGS="--resolver=lts-6"
 - ARGS=""
-- ARGS="--resolver=nightly.yaml"
+- ARGS="--resolver=nightly"
 
 before_install:
 # Download and unpack the stack executable
