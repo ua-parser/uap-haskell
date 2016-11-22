@@ -8,3 +8,4 @@
 - Greg Weber (@gregwebs)
 - Chris Allen (@bitemyapp)
 - Michael Xavier (@michaelxavier)
+- Fredrik Olsen (@folsen)
