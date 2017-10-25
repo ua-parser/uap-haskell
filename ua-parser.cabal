@@ -84,6 +84,9 @@ benchmark bench
   main-is: Main.hs
   hs-source-dirs: bench, src
   default-language:    Haskell2010
+  other-modules:
+    Web.UAParser
+    Web.UAParser.SuiteUtils
   build-depends:
                        base
                      , ua-parser
