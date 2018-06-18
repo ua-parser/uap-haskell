@@ -1,3 +1,6 @@
+0.7.5.0
+* Remove aeson and yaml upper bounds
+
 0.7.4.1
 * Loosen aeson bounds
 
