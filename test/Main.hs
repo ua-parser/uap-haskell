@@ -6,7 +6,7 @@ module Main where
 -------------------------------------------------------------------------------
 import           Control.Applicative     as A
 import qualified Data.ByteString.Char8   as B
-import           Data.Monoid
+import           Data.Monoid             as M
 import qualified Data.Text               as T
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -18,9 +18,9 @@ import           Web.UAParser.SuiteUtils
 
 main :: IO ()
 main = do
-  uaCases <- mconcat A.<$> mapM loadTests ["test_resources/firefox_user_agent_strings.yaml"
-                                          ,"test_resources/pgts_browser_list.yaml"
-                                          ,"tests/test_ua.yaml"]
+  uaCases <- M.mconcat A.<$> mapM loadTests ["test_resources/firefox_user_agent_strings.yaml"
+                                            ,"test_resources/pgts_browser_list.yaml"
+                                            ,"tests/test_ua.yaml"]
   osCases <- mconcat <$> mapM loadTests [ "test_resources/additional_os_tests.yaml"
                                         , "tests/test_os.yaml" ]
   devCases <- loadTests "tests/test_device.yaml"

@@ -33,7 +33,7 @@ import           Data.Data
 import           Data.Default
 import           Data.FileEmbed
 import           Data.Maybe
-import           Data.Monoid
+import           Data.Monoid           as M
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as T
@@ -215,7 +215,7 @@ makeReplacements
     -> Text
 makeReplacements (_:cs) t = makeReplacements' (zip ([1..4] :: [Int]) (cs ++ repeat "")) t
   where makeReplacements' [] acc = acc
-        makeReplacements' ((idx, cap):caps) acc = let acc' = T.replace ("$" <> showT idx) cap acc
+        makeReplacements' ((idx, cap):caps) acc = let acc' = T.replace ("$" M.<> showT idx) cap acc
                                         in makeReplacements' caps acc'
 makeReplacements _ t = t
 
