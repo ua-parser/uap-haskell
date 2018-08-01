@@ -1,3 +1,6 @@
+0.7.5.1
+* Resolve deprecation warning in YAML parsing.
+
 0.7.5.0
 * Remove aeson and yaml upper bounds
 
