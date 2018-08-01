@@ -47,7 +47,7 @@ import           Text.Regex.PCRE.Light
 -- UA Parser
 -------------------------------------------------------------------------------
 uaConfig :: UAConfig
-uaConfig = either error id $ decodeEither $(embedFile "deps/uap-core/regexes.yaml")
+uaConfig = either (error . show) id $ decodeEither' $(embedFile "deps/uap-core/regexes.yaml")
 {-# NOINLINE uaConfig #-}
 
 

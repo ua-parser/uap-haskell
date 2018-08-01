@@ -41,7 +41,7 @@ library
     , bytestring
     , text
     , pcre-light
-    , yaml             >= 0.7
+    , yaml             >= 0.8.3
     , aeson            >= 0.7
     , data-default
     , file-embed       < 0.1
