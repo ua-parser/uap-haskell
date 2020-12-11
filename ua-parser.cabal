@@ -46,7 +46,6 @@ library
     , aeson            >= 0.7
     , data-default
     , file-embed       < 0.1
-    , filepath
 
   if flag(lib-Werror)
     ghc-options: -Werror
