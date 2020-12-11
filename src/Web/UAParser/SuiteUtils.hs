@@ -22,7 +22,7 @@ import           System.FilePath
 
 -- Loading Test Cases
 loadTests :: FromJSON a => FilePath -> IO a
-loadTests fp = parseMonad p =<< either (error . show) id `fmap` decodeFileEither fp'
+loadTests fp = either (error . show) (either error id . parseEither p) `fmap` decodeFileEither fp'
   where
     fp' = "deps/uap-core" </> fp
     p = withObject "Value" $ \x -> x .: "test_cases"
