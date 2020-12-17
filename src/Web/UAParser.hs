@@ -66,7 +66,7 @@ parseUA bs = msum $ map go uaParsers
     where
       UAConfig{..} = uaConfig
 
-      go UAParser{..} = either (const Nothing) mkRes
+      go UAParser{..} = either (const Nothing) (mkRes . filter (not . T.null))
                       . mapM T.decodeUtf8' =<< match uaRegex bs []
         where
           mkRes caps@(_:f:v1:v2:v3:_) = Just $ UAResult (repF caps f) (repV1 caps (Just v1)) (repV2 caps (Just v2)) (repV3 caps (Just v3))

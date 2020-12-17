@@ -8,8 +8,10 @@ import           Control.Applicative     as A
 import qualified Data.ByteString.Char8   as B
 import           Data.Monoid             as M
 import qualified Data.Text               as T
+import           System.Environment
 import           Test.Tasty
 import           Test.Tasty.HUnit
+
 -------------------------------------------------------------------------------
 import           Web.UAParser
 import           Web.UAParser.SuiteUtils
@@ -24,6 +26,7 @@ main = do
   osCases <- mconcat <$> mapM loadTests [ "test_resources/additional_os_tests.yaml"
                                         , "tests/test_os.yaml" ]
   devCases <- loadTests "tests/test_device.yaml"
+  setEnv "TASTY_HIDE_SUCCESSES" "true"
   defaultMain $ testGroup "ua-parser" [ uaTests uaCases
                                       , osTests osCases
                                       , devTests devCases
