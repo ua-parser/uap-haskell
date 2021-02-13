@@ -1,3 +1,7 @@
+0.7.6.0
+* Newer GHC support
+* Update regexes
+
 0.7.5.1
 * Resolve deprecation warning in YAML parsing.
 
