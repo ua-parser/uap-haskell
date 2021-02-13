@@ -7,6 +7,6 @@ flags:
     lib-Werror: true
 extra-package-dbs: []
 nix:
-  enable: true
+  enable: false
   packages:
     - pcre
