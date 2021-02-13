@@ -6,3 +6,7 @@ flags:
   ua-parser:
     lib-Werror: true
 extra-package-dbs: []
+nix:
+  enable: true
+  packages:
+    - pcre
