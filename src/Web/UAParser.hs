@@ -42,6 +42,8 @@ import qualified Data.Text.Encoding    as T
 import           Data.Yaml
 import           GHC.Generics
 import           Text.Regex.PCRE.Light
+import           Data.Serialize
+import           Data.Serialize.Text ()
 -------------------------------------------------------------------------------
 
 
@@ -96,7 +98,7 @@ data UAResult = UAResult {
     , uarV1     :: Maybe Text
     , uarV2     :: Maybe Text
     , uarV3     :: Maybe Text
-    } deriving (Show, Read, Eq, Typeable, Data, Generic, NFData)
+    } deriving (Show, Read, Eq, Typeable, Data, Generic, NFData, Serialize)
 
 
 -------------------------------------------------------------------------------
@@ -154,7 +156,7 @@ data OSResult = OSResult {
     , osrV2     :: Maybe Text
     , osrV3     :: Maybe Text
     , osrV4     :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData,Serialize)
 
 instance Default OSResult where
     def = OSResult "Other" Nothing Nothing Nothing Nothing
@@ -236,7 +238,7 @@ data DevResult = DevResult {
       drFamily :: Text
     , drBrand  :: Maybe Text
     , drModel  :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData,Serialize)
 
 
 instance Default DevResult where

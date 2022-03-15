@@ -45,6 +45,8 @@ library
     , data-default
     , file-embed       < 0.1
     , deepseq
+    , cereal
+    , cereal-text
 
   if flag(lib-Werror)
     ghc-options: -Werror
@@ -79,6 +81,8 @@ test-suite test
     , filepath
     , file-embed
     , deepseq
+    , cereal
+    , cereal-text
 
 benchmark bench
   type: exitcode-stdio-1.0
@@ -101,6 +105,8 @@ benchmark bench
                      , pcre-light
                      , file-embed
                      , data-default
+                     , cereal
+                     , cereal-text
 
   if flag(lib-Werror)
     ghc-options: -Werror
