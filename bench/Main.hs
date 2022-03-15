@@ -7,7 +7,6 @@ module Main
 
 -------------------------------------------------------------------------------
 import           Control.Applicative     as A
-import           Control.DeepSeq
 import           Criterion.Main
 -------------------------------------------------------------------------------
 import           Web.UAParser
@@ -24,8 +23,3 @@ main = do
               , bench "Parsing 100 OSes" $ nf (map (parseOS . ostcString)) oses
               , bench "Parsing 100 Devices" $ nf (map (parseDev . dtcString)) devs
               ]
-
-
-instance NFData UAResult
-instance NFData OSResult
-instance NFData DevResult

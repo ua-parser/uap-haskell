@@ -1,6 +1,6 @@
 name:                ua-parser
 description:         Please refer to the git/github README on the project for example usage.
-version:             0.7.6.0
+version:             0.7.7.0
 synopsis:            A library for parsing User-Agent strings, official Haskell port of ua-parser
 license:             BSD3
 license-file:        LICENSE
@@ -44,6 +44,7 @@ library
     , aeson            >= 0.7
     , data-default
     , file-embed       < 0.1
+    , deepseq
 
   if flag(lib-Werror)
     ghc-options: -Werror
@@ -77,6 +78,7 @@ test-suite test
     , data-default
     , filepath
     , file-embed
+    , deepseq
 
 benchmark bench
   type: exitcode-stdio-1.0

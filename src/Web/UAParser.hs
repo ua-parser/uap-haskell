@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveDataTypeable        #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
@@ -26,6 +27,7 @@ module Web.UAParser
 
 -------------------------------------------------------------------------------
 import           Control.Applicative
+import           Control.DeepSeq
 import           Control.Monad
 import           Data.Aeson
 import           Data.ByteString.Char8 (ByteString)
@@ -94,7 +96,7 @@ data UAResult = UAResult {
     , uarV1     :: Maybe Text
     , uarV2     :: Maybe Text
     , uarV3     :: Maybe Text
-    } deriving (Show, Read, Eq, Typeable, Data, Generic)
+    } deriving (Show, Read, Eq, Typeable, Data, Generic, NFData)
 
 
 -------------------------------------------------------------------------------
@@ -152,7 +154,7 @@ data OSResult = OSResult {
     , osrV2     :: Maybe Text
     , osrV3     :: Maybe Text
     , osrV4     :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data,Generic)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData)
 
 instance Default OSResult where
     def = OSResult "Other" Nothing Nothing Nothing Nothing
@@ -234,7 +236,7 @@ data DevResult = DevResult {
       drFamily :: Text
     , drBrand  :: Maybe Text
     , drModel  :: Maybe Text
-    } deriving (Show,Read,Eq,Typeable,Data,Generic)
+    } deriving (Show,Read,Eq,Typeable,Data,Generic,NFData)
 
 
 instance Default DevResult where
