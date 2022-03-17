@@ -10,3 +10,4 @@
 - Michael Xavier (@michaelxavier)
 - Fredrik Olsen (@folsen)
 - Kostiantyn Rybnikov (@k-bx)
+- Alexander Shestakov (@maksar)

@@ -1,3 +1,6 @@
+0.7.7.0
+* [Add NFData and Serialize instances](https://github.com/ua-parser/uap-haskell/pull/16)
+
 0.7.6.0
 * Newer GHC support
 * Update regexes
