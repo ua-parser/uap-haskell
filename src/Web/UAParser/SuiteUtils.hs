@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 module Web.UAParser.SuiteUtils
     ( UserAgentTestCase(..)
     , OSTestCase(..)
@@ -12,6 +12,9 @@ import           Control.Applicative
 import           Control.Monad       (join)
 import           Data.Aeson          hiding ((.:?))
 import qualified Data.Aeson          as A
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.Key      as K
+#endif
 import           Data.ByteString     (ByteString)
 import           Data.Text           (Text)
 import qualified Data.Text.Encoding  as T
@@ -98,4 +101,8 @@ instance FromJSON DevTestCase where
 -- | Backport a more lenient version of .:? from newer versions of
 -- aeson. It accepts an explicit null as well as an omitted field.
 (.:?) :: (FromJSON a) => Object -> Text -> Parser (Maybe a)
+#if MIN_VERSION_aeson(2,0,0)
+o .:? k = join <$> (o A..:? K.fromText k)
+#else
 o .:? k = join <$> (o A..:? k)
+#endif
